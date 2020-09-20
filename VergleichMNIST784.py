@@ -20,17 +20,18 @@ import matlab.engine
 import scipy.io
 
 
-INPUT_SIZE = 196  # 784
+INPUT_SIZE = 784
 HIDDEN_SIZE = 50
+HIDDEN_SIZE2 = 50
 OUTPUT_SIZE = 10
-net_dims = [INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE]
+net_dims = [INPUT_SIZE, HIDDEN_SIZE, HIDDEN_SIZE2, OUTPUT_SIZE]
 
 BATCH_SIZE = 100
 NUM_EPOCHS = 10
 LEARNING_RATE = 0.01
 c = 0.05  # robustness parameter for LMT
-rho = 0.25  # ADMM penalty parameter
-mu = 0.01  # Lip penalty parameter
+rho = 2  # ADMM penalty parameter
+mu = 0.0008  # Lip penalty parameter
 lmbd = 0.0005  # L2 penalty parameter
 ind_Lip = 1  # 1 Lipschitz regularization, 2 Enforcing Lipschitz bounds
 Lip_nom = 10
@@ -45,8 +46,6 @@ class Network(nn.Module):
                                       - default is ReLU
         """
         super(Network, self).__init__()
-
-        self.AvgPool = torch.nn.AvgPool2d(kernel_size=2)
 
         layers = []
         for i in range(len(net_dims) - 1):
@@ -66,20 +65,7 @@ class Network(nn.Module):
             * ouput of neural network
         """
 
-        # print()
-        # print('Input shape: ', x.size())
-
-        reshape_output = torch.reshape(x, (100, 28, 28))
-        # print('Shape after reshaping: ', reshape_output.size())
-
-        pooling_output = self.AvgPool(reshape_output)
-        # print('Shape after pooling: ', pooling_output.size())
-
-        reshape2_output = torch.reshape(pooling_output, (100, 196))
-        # print('Shape after reshaping: ', reshape2_output.size())
-
-        x = self.net(reshape2_output)
-        # print('Shape after net: ', x.size())
+        x = self.net(x)
 
         return x
 
@@ -260,6 +246,225 @@ class Network(nn.Module):
         return test_accuracy
 
 
+def main():
+
+    train_loader, test_loader = create_data_loaders()
+    print(train_loader)
+    print(test_loader)
+    fname = os.path.join(os.getcwd(), 'saved_weights/mnist_weights.mat')
+
+    # nom NN
+
+    # define neural network model and print summary
+    net_dims = [INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE]
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
+    model = Network(activation=nn.ReLU).to(device)
+    summary(model, (392, 784))
+
+    # train model
+    print("Beginnning nominal NN training")
+    t = time.time()
+    parametersNom, Lip_course, loss_course, CEloss_course, accuracy_course = train_network(model, train_loader, test_loader)
+    timeNom = time.time() - t
+    print("Nominal training complete after {} seconds".format(timeNom))
+
+    # save data to saved_weights/ directory
+    weights, biases = model.extract_weights()
+    data = {'weights': np.array(weights, dtype=np.object)}
+    savemat(fname, data)
+    Lip_dic = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
+    Lip_nom = Lip_dic["Lipschitz"]
+    torch.save(model, 'MNIST784_NomModel.pt')
+
+    # plot losscourse
+    plt.plot(loss_course)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Loss Nom')
+    plt.show()
+
+    # plot CElosscourse
+    plt.plot(CEloss_course)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('CE-Loss Nom')
+    plt.show()
+
+    # plot Lip_course
+    plt.plot(Lip_course)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Lip_course Nom')
+    plt.show()
+
+    # plot accuracy_course
+    plt.plot(accuracy_course)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('accuracy_course Nom')
+    plt.show()
+
+    # L2 NN
+
+    # define neural network model and print summary
+    modelL2 = Network(activation=nn.ReLU).to(device)
+    summary(model, (392, 784))
+
+    # train model
+    print("Beginnning L2 training")
+    t = time.time()
+    parametersL2, Lip_courseL2, loss_courseL2, CEloss_courseL2, accuracy_courseL2 = train_network(modelL2, train_loader, test_loader, lmbd=lmbd)
+    timeL2 = time.time() - t
+    print("L2 training complete after {} seconds".format(timeL2))
+
+    # save data to saved_weights/ directory
+    weightsL2, biasesL2 = modelL2.extract_weights()
+    data = {'weightsL2': np.array(weightsL2, dtype=np.object)}
+    savemat(fname, data)
+    Lip_L2 = solve_SDP_multi.build_T_multi(weightsL2, biasesL2, net_dims)
+    torch.save(modelL2, 'MNIST784_L2Model.pt')
+
+    # plot losscourse
+    plt.plot(loss_courseL2)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Loss L2')
+    plt.show()
+
+    # plot CElosscourse
+    plt.plot(CEloss_courseL2)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('CE-Loss L2')
+    plt.show()
+
+    # plot Lip_course
+    plt.plot(Lip_courseL2)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Lip_course L2')
+    plt.show()
+
+    # plot accuracy_course
+    plt.plot(accuracy_courseL2)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('accuracy_course L2')
+    plt.show()
+
+    # NN with Lipschitz regularizer
+
+    # define neural network model and print summary
+    modelLip = Network(activation=nn.ReLU).to(device)
+    modelLip.load_state_dict(modelL2.state_dict())
+    summary(model, (392, 784))
+
+    # train model
+    L_des = Lip_L2["Lipschitz"]
+
+    print("Beginnning parameters = solve_SDP1")
+    t1 = time.time()
+    parameters = solve_SDP_multi.initialize_parameters(weights, biases)
+    timeSolveSDP1 = time.time() - t1
+    print("Complete parameters = solve_SDP1 after {} seconds".format(timeSolveSDP1))
+    print("Beginnning parameters = solve_SDP2")
+    t2 = time.time()
+    parameters_L2 = solve_SDP_multi.initialize_parameters(weightsL2, biasesL2)
+    timeSolveSDP2 = time.time() - t2
+    print("Complete parameters = solve_SDP2 after {} seconds".format(timeSolveSDP2))
+
+    init = 1  # 1 initialize from L2-NN, 2 initialize from nominal NN
+    if init == 1:
+        print("Beginnning LipSDP training")
+        t3 = time.time()
+        parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters_L2, L_des=L_des, T=Lip_L2["T"])
+        timeTrainSDP = time.time() - t3
+        print("LipSDP training complete after {} seconds".format(timeTrainSDP))
+    else:
+        print("Beginnning LipSDP training")
+        t3 = time.time()
+        parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters, L_des=L_des, T=Lip_dic["T"])
+        timeTrainSDP = time.time() - t3
+        print("LipSDP training complete after {} seconds".format(timeTrainSDP))
+
+    timeFullSDP = time.time() - t1
+    print("Full LipSDP training complete after {} seconds".format(timeFullSDP))
+
+    # save data to saved_weights/ directory
+    weightsLip, biasesLip = modelLip.extract_weights()
+    # weightsLip2, biasesLip2 = modelLip2.extract_weights()
+
+    Lip_Lip = solve_SDP_multi.build_T_multi(weightsLip, biasesLip, net_dims)
+    # Lip_Lip2 = solve_SDP.build_T(weightsLip2, biasesLip2, net_dims)
+    data = {'weightsLip': np.array(weightsLip, dtype=np.object)}
+    savemat(fname, data)
+    torch.save(modelLip, 'MNIST784_LipModel.pt')
+
+    # plot losscourse
+    plt.plot(loss_courseLip)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Loss Lip')
+    plt.title('Loss with rho = '+str(rho)+', mu = '+str(mu))
+    plt.show()
+
+    # plot CElosscourse
+    plt.plot(CEloss_courseLip)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('CE-Loss Lip')
+    plt.title('CE-Loss with rho = '+str(rho)+', mu = '+str(mu))
+    plt.show()
+
+    # plot Lip_course
+    plt.plot(Lip_courseLip)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Lip_course Lip')
+    plt.title('Lip with rho = '+str(rho)+', mu = '+str(mu))
+    plt.show()
+
+    # plot accuracy_course
+    plt.plot(accuracy_courseLip)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('accuracy_course Lip')
+    plt.title('Accuracy with rho = '+str(rho)+', mu = '+str(mu))
+    plt.show()
+
+    # LMT NN
+
+    # define neural network model and print summary
+    modelLMT = Network(activation=nn.ReLU).to(device)
+    summary(model, (392, 784))
+
+    # train model
+    print("Beginnning LMT training")
+    t = time.time()
+    parametersLMT, Lip_courseLMT, loss_courseLMT, CEloss_courseLMT, accuracy_courseLMT = train_network(modelLMT, train_loader, test_loader, c=c)
+    timeLMT = time.time() - t
+    print("LMT training complete after {} seconds".format(timeLMT))
+
+    # save data to saved_weights/ directory
+    weightsLMT, biasesLMT = modelLMT.extract_weights()
+    data = {'weightsLMT': np.array(weightsLMT, dtype=np.object)}
+    savemat(fname, data)
+    Lip_LMT = solve_SDP_multi.build_T_multi(weightsLMT, biasesLMT, net_dims)
+    torch.save(modelLMT, 'MNIST784_LMTModel.pt')
+
+    # plot losscourse
+    plt.plot(loss_courseLMT)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Loss LMT')
+    plt.show()
+
+    # plot CElosscourse
+    plt.plot(CEloss_courseLMT)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('CE-Loss LMT')
+    plt.show()
+
+    # plot Lip_course
+    plt.plot(Lip_courseLMT)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('Lip_course LMT')
+    plt.show()
+
+    # plot accuracy_course
+    plt.plot(accuracy_courseLMT)
+    plt.xlabel('# epochs x 5')
+    plt.ylabel('accuracy_course LMT')
+    plt.show()
+
+
 def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None, parameters=None, c=None, Lip_nom=None, T=None, L_des=None):
     """Train a neural network with Adam optimizer
     params:
@@ -389,225 +594,6 @@ def create_data_loaders():
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False)
 
     return train_loader, test_loader
-
-
-def main():
-
-    train_loader, test_loader = create_data_loaders()
-    print(train_loader)
-    print(test_loader)
-    fname = os.path.join(os.getcwd(), 'saved_weights/mnist_weights.mat')
-
-    # nom NN
-
-    # define neural network model and print summary
-    net_dims = [INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
-    model = Network(activation=nn.ReLU).to(device)
-    summary(model, (50, 28, 28))
-
-    # train model
-    print("Beginnning nominal NN training")
-    t = time.time()
-    parametersNom, Lip_course, loss_course, CEloss_course, accuracy_course = train_network(model, train_loader, test_loader)
-    timeNom = time.time() - t
-    print("Nominal training complete after {} seconds".format(timeNom))
-
-    # save data to saved_weights/ directory
-    weights, biases = model.extract_weights()
-    data = {'weights': np.array(weights, dtype=np.object)}
-    savemat(fname, data)
-    Lip_dic = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
-    Lip_nom = Lip_dic["Lipschitz"]
-    torch.save(model, 'MNIST196_NomModel.pt')
-
-    # plot losscourse
-    plt.plot(loss_course)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Loss Nom')
-    plt.show()
-
-    # plot CElosscourse
-    plt.plot(CEloss_course)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('CE-Loss Nom')
-    plt.show()
-
-    # plot Lip_course
-    plt.plot(Lip_course)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Lip_course Nom')
-    plt.show()
-
-    # plot accuracy_course
-    plt.plot(accuracy_course)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('accuracy_course Nom')
-    plt.show()
-
-    # L2 NN
-
-    # define neural network model and print summary
-    modelL2 = Network(activation=nn.ReLU).to(device)
-    summary(model, (50, 28, 28))
-
-    # train model
-    print("Beginnning L2 training")
-    t = time.time()
-    parametersL2, Lip_courseL2, loss_courseL2, CEloss_courseL2, accuracy_courseL2 = train_network(modelL2, train_loader, test_loader, lmbd=lmbd)
-    timeL2 = time.time() - t
-    print("L2 training complete after {} seconds".format(timeL2))
-
-    # save data to saved_weights/ directory
-    weightsL2, biasesL2 = modelL2.extract_weights()
-    data = {'weightsL2': np.array(weightsL2, dtype=np.object)}
-    savemat(fname, data)
-    Lip_L2 = solve_SDP_multi.build_T_multi(weightsL2, biasesL2, net_dims)
-    torch.save(modelL2, 'MNIST196_L2Model.pt')
-
-    # plot losscourse
-    plt.plot(loss_courseL2)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Loss L2')
-    plt.show()
-
-    # plot CElosscourse
-    plt.plot(CEloss_courseL2)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('CE-Loss L2')
-    plt.show()
-
-    # plot Lip_course
-    plt.plot(Lip_courseL2)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Lip_course L2')
-    plt.show()
-
-    # plot accuracy_course
-    plt.plot(accuracy_courseL2)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('accuracy_course L2')
-    plt.show()
-
-    # NN with Lipschitz regularizer
-
-    # define neural network model and print summary
-    modelLip = Network(activation=nn.ReLU).to(device)
-    modelLip.load_state_dict(modelL2.state_dict())
-    summary(model, (50, 28, 28))
-
-    # train model
-    L_des = Lip_L2["Lipschitz"]
-
-    print("Beginnning parameters = solve_SDP1")
-    t1 = time.time()
-    parameters = solve_SDP_multi.initialize_parameters(weights, biases)
-    timeSolveSDP1 = time.time() - t1
-    print("Complete parameters = solve_SDP1 after {} seconds".format(timeSolveSDP1))
-    print("Beginnning parameters = solve_SDP2")
-    t2 = time.time()
-    parameters_L2 = solve_SDP_multi.initialize_parameters(weightsL2, biasesL2)
-    timeSolveSDP2 = time.time() - t2
-    print("Complete parameters = solve_SDP2 after {} seconds".format(timeSolveSDP2))
-
-    init = 1  # 1 initialize from L2-NN, 2 initialize from nominal NN
-    if init == 1:
-        print("Beginnning LipSDP training")
-        t3 = time.time()
-        parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters_L2, L_des=L_des, T=Lip_L2["T"])
-        timeTrainSDP = time.time() - t3
-        print("LipSDP training complete after {} seconds".format(timeTrainSDP))
-    else:
-        print("Beginnning LipSDP training")
-        t3 = time.time()
-        parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters, L_des=L_des, T=Lip_dic["T"])
-        timeTrainSDP = time.time() - t3
-        print("LipSDP training complete after {} seconds".format(timeTrainSDP))
-
-    timeFullSDP = time.time() - t1
-    print("Full LipSDP training complete after {} seconds".format(timeFullSDP))
-
-    # save data to saved_weights/ directory
-    weightsLip, biasesLip = modelLip.extract_weights()
-    # weightsLip2, biasesLip2 = modelLip2.extract_weights()
-
-    Lip_Lip = solve_SDP_multi.build_T_multi(weightsLip, biasesLip, net_dims)
-    # Lip_Lip2 = solve_SDP.build_T(weightsLip2, biasesLip2, net_dims)
-    data = {'weightsLip': np.array(weightsLip, dtype=np.object)}
-    savemat(fname, data)
-    torch.save(modelLip, 'MNIST196_LipModel.pt')
-
-    # plot losscourse
-    plt.plot(loss_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Loss Lip')
-    plt.title('Loss with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
-
-    # plot CElosscourse
-    plt.plot(CEloss_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('CE-Loss Lip')
-    plt.title('CE-Loss with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
-
-    # plot Lip_course
-    plt.plot(Lip_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Lip_course Lip')
-    plt.title('Lip with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
-
-    # plot accuracy_course
-    plt.plot(accuracy_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('accuracy_course Lip')
-    plt.title('Accuracy with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
-
-    # LMT NN
-
-    # define neural network model and print summary
-    modelLMT = Network(activation=nn.ReLU).to(device)
-    summary(model, (50, 28, 28))
-
-    # train model
-    print("Beginnning LMT training")
-    t = time.time()
-    parametersLMT, Lip_courseLMT, loss_courseLMT, CEloss_courseLMT, accuracy_courseLMT = train_network(modelLMT, train_loader, test_loader, c=c)
-    timeLMT = time.time() - t
-    print("LMT training complete after {} seconds".format(timeLMT))
-
-    # save data to saved_weights/ directory
-    weightsLMT, biasesLMT = modelLMT.extract_weights()
-    data = {'weightsLMT': np.array(weightsLMT, dtype=np.object)}
-    savemat(fname, data)
-    Lip_LMT = solve_SDP_multi.build_T_multi(weightsLMT, biasesLMT, net_dims)
-    torch.save(modelLMT, 'MNIST196_LMTModel.pt')
-
-    # plot losscourse
-    plt.plot(loss_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Loss LMT')
-    plt.show()
-
-    # plot CElosscourse
-    plt.plot(CEloss_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('CE-Loss LMT')
-    plt.show()
-
-    # plot Lip_course
-    plt.plot(Lip_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Lip_course LMT')
-    plt.show()
-
-    # plot accuracy_course
-    plt.plot(accuracy_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('accuracy_course LMT')
-    plt.show()
 
 
 if __name__ == '__main__':

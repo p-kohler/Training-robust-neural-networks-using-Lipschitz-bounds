@@ -1,4 +1,6 @@
 function parameters=solve_sdp_multi(parameters, x, sdp)
+%[parameters] = solve_sdp(n_x, n_h, n_y, lambd, mu, Lip, ind_Lip, parameters)
+%test
 
 addpath(genpath('..\YALMIP-master'))
 addpath(genpath('C:\Program Files\Mosek\9.2'))

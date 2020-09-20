@@ -5,7 +5,6 @@ Created on Tue Jul 21 02:21:30 2020
 @author: paul_
 """
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -26,6 +25,14 @@ HIDDEN_SIZE1 = 10
 HIDDEN_SIZE2 = 10
 OUTPUT_SIZE = 3
 net_dims = [INPUT_SIZE, HIDDEN_SIZE1, HIDDEN_SIZE2, OUTPUT_SIZE]
+
+# hyperperparameter
+c = 0.05  # robustness for LMT
+lr = 0.1  # learning rate
+rho = 0.25  # ADMM penalty parameter
+mu = 0.00001  # Lip penalty parameter
+lmbd = 0.0005  # L2 penalty parameter
+ind_Lip = 1  # 1 Lipschitz regularization, 2 Enforcing Lipschitz bounds
 
 
 class MeinNetz(nn.Module):
@@ -271,15 +278,6 @@ class MeinNetz(nn.Module):
         return parameters, L_course_Lip, loss_course_Lip, CEloss_course_Lip
 
 
-# hyperperparameter c - required robustness
-c = 0.05
-lr = 0.1
-rho = 0.25  # ADMM penalty parameter
-mu = 0.00001  # Lip penalty parameter
-lmbd = 0.004  # L2 penalty parameter
-it_ADMM = 10
-ind_Lip = 1  # 1 Lipschitz regularization, 2 Enforcing Lipschitz bounds
-
 # Create Data
 N = 50
 np.random.seed(1612111977)
@@ -315,11 +313,8 @@ for j in range(N):
 
 # Create NomNetz
 netz = MeinNetz()
-# if os.path.isfile('meinNetzRandom.pt'):
-#    netz = torch.load('meinNetzRandom.pt')
-print(netz)
-
 optimizer = optim.SGD(netz.parameters(), lr=lr)
+
 
 print("Beginnning nominal NN training")
 t = time.time()
@@ -333,7 +328,7 @@ Lip = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
 Lip_dic = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
 Lip_nom = Lip_dic["Lipschitz"]
 
-torch.save(netz, 'NomNetz.pt')
+torch.save(netz, '2D_NomModel.pt')
 
 # plot losscourse
 plt.plot(loss_course)
@@ -491,7 +486,7 @@ print("L2 Training Complete after {} seconds".format(timeL2))
 weights_L2, biases_L2 = net_L2.extract_weights()
 Lip_L2 = solve_SDP_multi.build_T_multi(weights_L2, biases_L2, net_dims)
 
-torch.save(net_L2, 'L2Netz.pt')
+torch.save(net_L2, '2D_L2Model.pt')
 
 # plot losscourse
 plt.plot(loss_course_L2)
@@ -657,7 +652,7 @@ weights_Lip2, biases_Lip2 = net_Lip2.extract_weights()
 Lip_Lip = solve_SDP_multi.build_T_multi(weights_Lip, biases_Lip, net_dims)
 Lip_Lip2 = solve_SDP_multi.build_T_multi(weights_Lip2, biases_Lip2, net_dims)
 
-torch.save(net_Lip, 'LipNetz.pt')
+torch.save(net_Lip, '2D_LipModel.pt')
 
 # plot losscourse
 plt.plot(loss_course_Lip)
@@ -788,7 +783,7 @@ print("Training Complete after {} seconds".format(timeLMT))
 weights_LMT, biases_LMT = net_LMT.extract_weights()
 Lip_LMT = solve_SDP_multi.build_T_multi(weights_LMT, biases_LMT, net_dims)
 
-torch.save(net_LMT, 'LMTNetz.pt')
+torch.save(net_LMT, '2D_LMTModel.pt')
 
 # plot losscourse
 plt.plot(loss_course_LMT)
@@ -978,6 +973,7 @@ plt.legend()
 plt.savefig('Results/'+str(mu)+str(rho)+date+'_Lip.png')
 plt.show()
 
+
 # cut
 plt.plot(a, out_cut.detach().numpy()[:, 0], '-b', label='Nom0')
 plt.plot(a, out_cut.detach().numpy()[:, 1], '-r', label='Nom1')
@@ -1006,7 +1002,6 @@ hyper = {
     'mu': mu,
     'lambda': lmbd,
     'c': c,
-    'iterations_ADMM': it_ADMM,
     'ind_Lip': ind_Lip,
     'Lip_des': L_des
 }

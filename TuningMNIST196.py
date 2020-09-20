@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Sep  9 13:22:03 2020
+Created on Tue Aug  4 23:12:29 2020
 
 @author: paul_
 """
@@ -22,8 +22,9 @@ import scipy.io
 
 INPUT_SIZE = 196  # 784
 HIDDEN_SIZE = 50
+HIDDEN_SIZE2 = 50
 OUTPUT_SIZE = 10
-net_dims = [INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE]
+net_dims = [INPUT_SIZE, HIDDEN_SIZE, HIDDEN_SIZE2, OUTPUT_SIZE]
 
 BATCH_SIZE = 100
 NUM_EPOCHS = 10
@@ -491,123 +492,90 @@ def main():
 
     # NN with Lipschitz regularizer
 
-    # define neural network model and print summary
-    modelLip = Network(activation=nn.ReLU).to(device)
-    modelLip.load_state_dict(modelL2.state_dict())
-    summary(model, (50, 28, 28))
+    rho_array = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 3, 5]
+    mu_array = [0.000001, 0.000002, 0.000005, 0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.1]
 
-    # train model
-    L_des = Lip_L2["Lipschitz"]
+    for k in range(len(rho_array)):
 
-    print("Beginnning parameters = solve_SDP1")
-    t1 = time.time()
-    parameters = solve_SDP_multi.initialize_parameters(weights, biases)
-    timeSolveSDP1 = time.time() - t1
-    print("Complete parameters = solve_SDP1 after {} seconds".format(timeSolveSDP1))
-    print("Beginnning parameters = solve_SDP2")
-    t2 = time.time()
-    parameters_L2 = solve_SDP_multi.initialize_parameters(weightsL2, biasesL2)
-    timeSolveSDP2 = time.time() - t2
-    print("Complete parameters = solve_SDP2 after {} seconds".format(timeSolveSDP2))
+        rho = rho_array[k]
 
-    init = 1  # 1 initialize from L2-NN, 2 initialize from nominal NN
-    if init == 1:
-        print("Beginnning LipSDP training")
-        t3 = time.time()
-        parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters_L2, L_des=L_des, T=Lip_L2["T"])
-        timeTrainSDP = time.time() - t3
-        print("LipSDP training complete after {} seconds".format(timeTrainSDP))
-    else:
-        print("Beginnning LipSDP training")
-        t3 = time.time()
-        parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters, L_des=L_des, T=Lip_dic["T"])
-        timeTrainSDP = time.time() - t3
-        print("LipSDP training complete after {} seconds".format(timeTrainSDP))
+        for m in range(len(mu_array)):
 
-    timeFullSDP = time.time() - t1
-    print("Full LipSDP training complete after {} seconds".format(timeFullSDP))
+            mu = mu_array[m]
 
-    # save data to saved_weights/ directory
-    weightsLip, biasesLip = modelLip.extract_weights()
-    # weightsLip2, biasesLip2 = modelLip2.extract_weights()
+            # define neural network model and print summary
+            modelLip = Network(activation=nn.ReLU).to(device)
+            modelLip.load_state_dict(modelL2.state_dict())
+            summary(model, (50, 28, 28))
 
-    Lip_Lip = solve_SDP_multi.build_T_multi(weightsLip, biasesLip, net_dims)
-    # Lip_Lip2 = solve_SDP.build_T(weightsLip2, biasesLip2, net_dims)
-    data = {'weightsLip': np.array(weightsLip, dtype=np.object)}
-    savemat(fname, data)
-    torch.save(modelLip, 'MNIST196_LipModel.pt')
+            # train model
+            L_des = Lip_L2["Lipschitz"]
 
-    # plot losscourse
-    plt.plot(loss_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Loss Lip')
-    plt.title('Loss with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
+            print("Beginnning parameters = solve_SDP1")
+            t1 = time.time()
+            parameters = solve_SDP_multi.initialize_parameters(weights, biases)
+            timeSolveSDP1 = time.time() - t1
+            print("Complete parameters = solve_SDP1 after {} seconds".format(timeSolveSDP1))
+            print("Beginnning parameters = solve_SDP2")
+            t2 = time.time()
+            parameters_L2 = solve_SDP_multi.initialize_parameters(weightsL2, biasesL2)
+            timeSolveSDP2 = time.time() - t2
+            print("Complete parameters = solve_SDP2 after {} seconds".format(timeSolveSDP2))
 
-    # plot CElosscourse
-    plt.plot(CEloss_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('CE-Loss Lip')
-    plt.title('CE-Loss with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
+            init = 1  # 1 initialize from L2-NN, 2 initialize from nominal NN
+            if init == 1:
+                print("Beginnning LipSDP training")
+                t3 = time.time()
+                parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters_L2, L_des=L_des, T=Lip_L2["T"])
+                timeTrainSDP = time.time() - t3
+                print("LipSDP training complete after {} seconds".format(timeTrainSDP))
+            else:
+                print("Beginnning LipSDP training")
+                t3 = time.time()
+                parameters_Lip, Lip_courseLip, loss_courseLip, CEloss_courseLip, accuracy_courseLip = train_network(modelLip, train_loader, test_loader, rho=rho, mu=mu, parameters=parameters, L_des=L_des, T=Lip_dic["T"])
+                timeTrainSDP = time.time() - t3
+                print("LipSDP training complete after {} seconds".format(timeTrainSDP))
 
-    # plot Lip_course
-    plt.plot(Lip_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Lip_course Lip')
-    plt.title('Lip with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
+            timeFullSDP = time.time() - t1
+            print("Full LipSDP training complete after {} seconds".format(timeFullSDP))
 
-    # plot accuracy_course
-    plt.plot(accuracy_courseLip)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('accuracy_course Lip')
-    plt.title('Accuracy with rho = '+str(rho)+', mu = '+str(mu))
-    plt.show()
+            # save data to saved_weights/ directory
+            weightsLip, biasesLip = modelLip.extract_weights()
+            # weightsLip2, biasesLip2 = modelLip2.extract_weights()
 
-    # LMT NN
+            Lip_Lip = solve_SDP_multi.build_T_multi(weightsLip, biasesLip, net_dims)
+            # Lip_Lip2 = solve_SDP.build_T(weightsLip2, biasesLip2, net_dims)
+            data = {'weightsLip': np.array(weightsLip, dtype=np.object)}
+            savemat(fname, data)
+            torch.save(model, 'MNIST196_LipModel rho = {}, mu = {}.pt'.format(rho, mu))
 
-    # define neural network model and print summary
-    modelLMT = Network(activation=nn.ReLU).to(device)
-    summary(model, (50, 28, 28))
+            # plot losscourse
+            plt.plot(loss_courseLip)
+            plt.xlabel('# epochs x 5')
+            plt.ylabel('Loss Lip')
+            plt.title('Loss with rho = '+str(rho)+', mu = '+str(mu))
+            plt.show()
 
-    # train model
-    print("Beginnning LMT training")
-    t = time.time()
-    parametersLMT, Lip_courseLMT, loss_courseLMT, CEloss_courseLMT, accuracy_courseLMT = train_network(modelLMT, train_loader, test_loader, c=c)
-    timeLMT = time.time() - t
-    print("LMT training complete after {} seconds".format(timeLMT))
+            # plot CElosscourse
+            plt.plot(CEloss_courseLip)
+            plt.xlabel('# epochs x 5')
+            plt.ylabel('CE-Loss Lip')
+            plt.title('CE-Loss with rho = '+str(rho)+', mu = '+str(mu))
+            plt.show()
 
-    # save data to saved_weights/ directory
-    weightsLMT, biasesLMT = modelLMT.extract_weights()
-    data = {'weightsLMT': np.array(weightsLMT, dtype=np.object)}
-    savemat(fname, data)
-    Lip_LMT = solve_SDP_multi.build_T_multi(weightsLMT, biasesLMT, net_dims)
-    torch.save(modelLMT, 'MNIST196_LMTModel.pt')
+            # plot Lip_course
+            plt.plot(Lip_courseLip)
+            plt.xlabel('# epochs x 5')
+            plt.ylabel('Lip_course Lip')
+            plt.title('Lip with rho = '+str(rho)+', mu = '+str(mu))
+            plt.show()
 
-    # plot losscourse
-    plt.plot(loss_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Loss LMT')
-    plt.show()
-
-    # plot CElosscourse
-    plt.plot(CEloss_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('CE-Loss LMT')
-    plt.show()
-
-    # plot Lip_course
-    plt.plot(Lip_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('Lip_course LMT')
-    plt.show()
-
-    # plot accuracy_course
-    plt.plot(accuracy_courseLMT)
-    plt.xlabel('# epochs x 5')
-    plt.ylabel('accuracy_course LMT')
-    plt.show()
+            # plot accuracy_course
+            plt.plot(accuracy_courseLip)
+            plt.xlabel('# epochs x 5')
+            plt.ylabel('accuracy_course Lip')
+            plt.title('Accuracy with rho = '+str(rho)+', mu = '+str(mu))
+            plt.show()
 
 
 if __name__ == '__main__':
