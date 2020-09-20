@@ -284,9 +284,10 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
             timeLipTrain = time.time() - t1
             print("Training Complete after {} seconds.".format(timeLipTrain))
 
-            Lip_course.append(epoch_Lip)
-            loss_course.append(epoch_loss)
-            CEloss_course.append(epoch_CEloss)
+            for k in range(len(epoch_Lip)):
+                Lip_course.append(epoch_Lip[k])
+                loss_course.append(epoch_loss[k])
+                CEloss_course.append(epoch_CEloss[k])
             weightsLip, biasesLip = model.extract_weights()
             scipy.io.savemat('c:/tmp/Lipparameters.mat', parameters)
 
@@ -328,9 +329,10 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
             timeLipTrain = time.time() - t1
             print("Training Complete after {} seconds.".format(timeLipTrain))
 
-            Lip_course.append(epoch_Lip)
-            loss_course.append(epoch_loss)
-            CEloss_course.append(epoch_CEloss)
+            for k in range(len(epoch_Lip)):
+                Lip_course.append(epoch_Lip[k])
+                loss_course.append(epoch_loss[k])
+                CEloss_course.append(epoch_CEloss[k])
             weightsLip, biasesLip = model.extract_weights()
             scipy.io.savemat('c:/tmp/Lipparameters.mat', parameters)
 

@@ -80,7 +80,7 @@ class MeinNetz(nn.Module):
 
     def LMT_reg(self, c, parameters=None):
         if Lip_nom is None:
-            self.train()
+            Lip_course, loss_course, CEloss_course, T = self.train()
 
         for j in range(N):
             if np.argmax(out.detach().numpy()[j, :]) == target_cross[j]:
@@ -136,6 +136,7 @@ class MeinNetz(nn.Module):
                 weights, biases = self.extract_weights()
                 Lip = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
                 L = Lip["Lipschitz"]
+                T = Lip["T"]
                 L_W = 1
                 for j in range(len(weights)):
                     L_W = L_W * np.linalg.norm(weights[j], 2)
@@ -176,6 +177,7 @@ class MeinNetz(nn.Module):
                 weights, biases = self.extract_weights()
                 Lip = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
                 L = Lip["Lipschitz"]
+                T = Lip["T"]
                 L_W = 1
                 for j in range(len(weights)):
                     L_W = L_W * np.linalg.norm(weights[j], 2)
@@ -203,7 +205,7 @@ class MeinNetz(nn.Module):
             Lip_dic = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
             Lip_nom = Lip_dic["Lipschitz"]
 
-        return Lip_course, loss_course, CEloss_course
+        return Lip_course, loss_course, CEloss_course, T
 
     def train_Lipschitz(self, parameters, T):
         L_course_Lip = []
@@ -214,7 +216,7 @@ class MeinNetz(nn.Module):
             print("Beginn ADMM Iteration # {:d}".format(i))
             print("Beginn Training")
             t1 = time.time()
-            L_course, loss_course, CEloss_course = self.train(rho=rho, parameters=parameters) #loss update step
+            L_course, loss_course, CEloss_course, T = self.train(rho=rho, parameters=parameters) #loss update step
             timeLipTrain = time.time() - t1
             print("Training Complete after {} seconds.".format(timeLipTrain))
             for j in range(len(L_course)):
@@ -247,7 +249,7 @@ class MeinNetz(nn.Module):
             print("Beginn ADMM Iteration # {:d}".format(i))
             print("Beginn Training")
             t1 = time.time()
-            L_course, loss_course, CEloss_course = self.train(rho=rho, parameters=parameters) #loss update step
+            L_course, loss_course, CEloss_course, T = self.train(rho=rho, parameters=parameters) #loss update step
             timeLipTrain = time.time() - t1
             print("Training Complete after {} seconds.".format(timeLipTrain))
             for j in range(len(L_course)):
@@ -318,7 +320,7 @@ optimizer = optim.SGD(netz.parameters(), lr=lr)
 
 print("Beginnning nominal NN training")
 t = time.time()
-Lip_course, loss_course, CEloss_course = netz.train()
+Lip_course, loss_course, CEloss_course, T = netz.train()
 timeNom = time.time() - t
 print("Nominal Training Complete after {} seconds".format(timeNom))
 
@@ -479,7 +481,7 @@ net_L2 = MeinNetz()
 
 print("Beginnning L2 training")
 t = time.time()
-Lip_course_L2, loss_course_L2, CEloss_course_L2 = net_L2.train(lmbd=lmbd)
+Lip_course_L2, loss_course_L2, CEloss_course_L2, T = net_L2.train(lmbd=lmbd)
 timeL2 = time.time() - t
 print("L2 Training Complete after {} seconds".format(timeL2))
 
@@ -776,7 +778,7 @@ net_LMT.load_state_dict(net_L2.state_dict())
 
 print("Beginnning LMT training")
 t = time.time()
-Lip_course_LMT, loss_course_LMT, CEloss_course_LMT = net_LMT.train(c=c)
+Lip_course_LMT, loss_course_LMT, CEloss_course_LMT, T = net_LMT.train(c=c)
 timeLMT = time.time() - t
 print("Training Complete after {} seconds".format(timeLMT))
 
