@@ -10,9 +10,27 @@ import torch
 import matlab.engine
 import numpy as np
 import json
+import atexit
+from experiment_paths import REPO_ROOT, run_dir, output_path
 
 
-eng = matlab.engine.start_matlab()
+_engine = None
+
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        engine = matlab.engine.start_matlab()
+        try:
+            engine.addpath(str(REPO_ROOT), nargout=0)
+            engine.cd(str(run_dir()), nargout=0)
+            engine.configure_solver_paths(nargout=0)
+        except Exception:
+            engine.quit()
+            raise
+        _engine = engine
+        atexit.register(engine.quit)
+    return _engine
 
 
 def build_T_multi(weights, biases, net_dims):
@@ -33,11 +51,11 @@ def build_T_multi(weights, biases, net_dims):
         biases_dict.update({
             'b{:d}'.format(i): np.array(biases, dtype=np.object)[i].tolist() })
 
-    with open('weights.json', 'w') as f:  # writing JSON object
+    with open(output_path('weights.json'), 'w') as f:  # writing JSON object
         json.dump(weights_dict, f)
-    with open('biases.json', 'w') as f:  # writing JSON object
+    with open(output_path('biases.json'), 'w') as f:  # writing JSON object
         json.dump(biases_dict, f)
-    Lip = eng.calculate_Lipschitz_multi(parameters, x)
+    Lip = get_engine().calculate_Lipschitz_multi(parameters, x)
     return Lip
 
 
@@ -51,7 +69,7 @@ def solve_SDP_multi(parameters, T, net_dims, rho, mu, ind_Lip, L_des):
         'L_des': matlab.double([L_des])
     }
 
-    parameters = eng.solve_sdp_multi(parameters, x, sdp)
+    parameters = get_engine().solve_sdp_multi(parameters, x, sdp)
 
     return parameters
 
@@ -75,3 +93,4 @@ def initialize_parameters(weights, biases):
             'Yb{:d}'.format(i): matlab.double(torch.zeros(biases[i].shape).tolist()),
             })
     return parameters
+

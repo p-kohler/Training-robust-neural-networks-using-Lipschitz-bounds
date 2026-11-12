@@ -15,6 +15,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 import time
 import solve_SDP_multi
+from experiment_paths import data_dir, output_path
 import matlab.engine
 from datetime import datetime
 from scipy.io import savemat
@@ -330,7 +331,7 @@ Lip = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
 Lip_dic = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
 Lip_nom = Lip_dic["Lipschitz"]
 
-torch.save(netz, '2D_NomModel.pt')
+torch.save(netz, output_path('2D_NomModel.pt'))
 
 
 # NN with L2 regularizer
@@ -346,7 +347,7 @@ print("L2 Training Complete after {} seconds".format(timeL2))
 weights_L2, biases_L2 = net_L2.extract_weights()
 Lip_L2 = solve_SDP_multi.build_T_multi(weights_L2, biases_L2, net_dims)
 
-torch.save(net_L2, '2D_L2Model.pt')
+torch.save(net_L2, output_path('2D_L2Model.pt'))
 
 
 # NN with Lipschitz regularizer
@@ -409,7 +410,7 @@ for k in range(len(rho_array)):
         Lip_Lip = solve_SDP_multi.build_T_multi(weights_Lip, biases_Lip, net_dims)
         Lip_Lip2 = solve_SDP_multi.build_T_multi(weights_Lip2, biases_Lip2, net_dims)
 
-        torch.save(net_Lip, '2D_LipModel rho = {}, mu = {}.pt'.format(rho, mu))
+        torch.save(net_Lip, output_path('2D_LipModel rho = {}, mu = {}.pt'.format(rho, mu)))
 
         # plot losscourse
         plt.plot(loss_course_Lip)
@@ -614,6 +615,7 @@ res["biases_L2"] = biases_L2
 res["biases_Lip"] = biases_Lip
 res["biases_Lip2"] = biases_Lip2
 
-fname = os.path.join(os.getcwd(), 'Results/res_'+date+'.mat')
+fname = output_path('Results/res_'+date+'.mat')
 data = {'res': np.array(res)}
 savemat(fname, data)
+
