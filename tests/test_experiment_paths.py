@@ -35,7 +35,7 @@ class PathsTest(unittest.TestCase):
             self.assertNotEqual(paths[0], paths[1])
             for path in paths:
                 self.assertEqual(path.read_text(), 'result')
-                self.assertEqual(path.parents[2], Path(root))
+                self.assertEqual(path.parents[2], Path(root).resolve())
 
     def test_relative_configuration_and_model_input(self):
         with patch.dict(os.environ, {'LIP_MODEL_DIR': 'runs/example',
