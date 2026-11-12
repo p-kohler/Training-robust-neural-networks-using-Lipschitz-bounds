@@ -231,7 +231,7 @@ class MeinNetz(nn.Module):
             t = time.time()
             for j in range(len(weights)):
                 parameters.update({
-                    'W{:d}'.format(j): matlab.double(np.array(weights, dtype=np.object)[j].tolist()),
+                    'W{:d}'.format(j): matlab.double(np.array(weights, dtype=object)[j].tolist()),
                     })
             timeParameterUpdate = time.time() - t
             print("Parameter update step complete after {} seconds.".format(timeParameterUpdate))
@@ -264,7 +264,7 @@ class MeinNetz(nn.Module):
             t = time.time()
             for j in range(len(weights)):
                 parameters.update({
-                    'W{:d}'.format(j): matlab.double(np.array(weights, dtype=np.object)[j].tolist()),
+                    'W{:d}'.format(j): matlab.double(np.array(weights, dtype=object)[j].tolist()),
                     })
             timeParameterUpdate = time.time() - t
             print("Parameter update step complete after {} seconds.".format(timeParameterUpdate))

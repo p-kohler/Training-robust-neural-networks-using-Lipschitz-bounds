@@ -23,7 +23,7 @@ The experiments compare nominal training, L2 regularization, Lipschitz-based tra
 - [YALMIP](https://yalmip.github.io/download/) and [MOSEK](https://www.mosek.com/downloads/).
 - Working MATLAB and MOSEK licenses, configured outside this repository.
 
-The original tested dependency versions are not recorded. This is legacy research code, not a verified installation recipe for current package releases. In particular, the scripts use `np.object`, which is unavailable in recent NumPy releases. Use a compatible legacy environment or migrate those calls before using a modern NumPy environment. Match PyTorch and torchvision versions and check MATLAB Engine compatibility with your Python version.
+The original tested dependency versions are not recorded. This is legacy research code, not a verified installation recipe for current package releases. The removed NumPy `np.object` alias has been replaced with the built-in `object` dtype. This addresses that compatibility issue; it does not establish compatibility of the complete training stack with every current package version. Match PyTorch and torchvision versions and check MATLAB Engine compatibility with your Python version.
 
 ## Setup
 
