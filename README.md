@@ -94,7 +94,28 @@ These checks cover portable paths, separate-process output isolation, script out
 
 ## Citation and reuse
 
-If you use this code in research, cite the accompanying paper, **"Training robust neural networks using Lipschitz bounds"**. Full bibliographic metadata is not yet included here.
+If you use this code in research, please cite:
+
+> P. Pauli, A. Koch, J. Berberich, P. Kohler, and F. Allgöwer, “Training Robust Neural Networks Using Lipschitz Bounds,” *IEEE Control Systems Letters*, vol. 6, pp. 121–126, 2021, doi: [10.1109/LCSYS.2021.3050444](https://doi.org/10.1109/LCSYS.2021.3050444).
+
+[Published paper](https://doi.org/10.1109/LCSYS.2021.3050444) · [Open-access preprint](https://arxiv.org/abs/2005.02929)
+
+```bibtex
+@article{pauli2021training,
+  author  = {Pauli, Patricia and Koch, Anne and Berberich, Julian and
+             Kohler, Paul and Allg{\"o}wer, Frank},
+  title   = {Training Robust Neural Networks Using {Lipschitz} Bounds},
+  journal = {IEEE Control Systems Letters},
+  volume  = {6},
+  pages   = {121--126},
+  year    = {2021},
+  doi     = {10.1109/LCSYS.2021.3050444},
+  url     = {https://doi.org/10.1109/LCSYS.2021.3050444}
+}
+```
+
+The year above follows the [authors’ institute bibliography](https://www.ist.uni-stuttgart.de/institute/team/Berberich), which records the 2021 online publication; volume 6 is also catalogued with the issue year 2022.
+
 
 No license file is currently provided; redistribution and reuse permissions should be clarified with the authors.
 
