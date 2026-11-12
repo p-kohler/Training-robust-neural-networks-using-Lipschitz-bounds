@@ -78,7 +78,7 @@ elseif ind_Lip==2
 %        X(sum(net_dim(1:k-2))+1:sum(net_dim(1:k-1)), sum(net_dim(1:k-1))+1:sum(net_dim(1:k))) = W_bar{k-1}'*Ts{k};
 %        X(sum(net_dim(1:k-1))+1:sum(net_dim(1:k)), sum(net_dim(1:k-2))+1:sum(net_dim(1:k-1))) = Ts{k}*W_bar{k-1};
 %    end
-    X2 = [A;B]'*[0*T,T;T-2*T]*[A;B]; %M = X + Q;
+    X2 = [A;B]'*[0*T, T; T, -2*T]*[A;B]; %M = X + Q;
     M = X2 + Q;
     F1 = (M <= -eps*eye(sum(net_dim(1:l+1))));
     optimize(F1, mu*rho + W_diff + sumOfTraces);
