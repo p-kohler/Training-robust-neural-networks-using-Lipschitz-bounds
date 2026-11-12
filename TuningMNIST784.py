@@ -14,6 +14,7 @@ from scipy.io import savemat
 import numpy as np
 import os
 import solve_SDP_multi
+from experiment_paths import data_dir, output_path
 import matplotlib.pyplot as plt
 import time
 import matlab.engine
@@ -275,7 +276,7 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
                 loss_course.append(epoch_loss[k])
                 CEloss_course.append(epoch_CEloss[k])
             weightsLip, biasesLip = model.extract_weights()
-            scipy.io.savemat('c:/tmp/Lipparameters.mat', parameters)
+            scipy.io.savemat(output_path('Lipparameters.mat'), parameters)
 
             print("Beginn parameter update step")
             t = time.time()
@@ -304,7 +305,7 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
             print(Lip_now)
             print(Lip_prev)
             
-            scipy.io.savemat('c:/tmp/Lipparameters_updated.mat', parameters)
+            scipy.io.savemat(output_path('Lipparameters_updated.mat'), parameters)
 
         while abs(Lip_prev - Lip_now) >= 0.5:
             i += 1
@@ -320,7 +321,7 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
                 loss_course.append(epoch_loss[k])
                 CEloss_course.append(epoch_CEloss[k])
             weightsLip, biasesLip = model.extract_weights()
-            scipy.io.savemat('c:/tmp/Lipparameters.mat', parameters)
+            scipy.io.savemat(output_path('Lipparameters.mat'), parameters)
 
             print("Beginn parameter update step")
             t = time.time()
@@ -349,7 +350,7 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
             print(Lip_now)
             print(Lip_prev)
 
-            scipy.io.savemat('c:/tmp/Lipparameters_updated.mat', parameters)
+            scipy.io.savemat(output_path('Lipparameters_updated.mat'), parameters)
 
     if lmbd is not None:
         loss_course, CEloss_course, Lip_course, accuracy_course, T = model.train_model(train_loader, test_loader, optimizer, criterion, lmbd)
@@ -370,10 +371,10 @@ def create_data_loaders():
         * train_loader: DataLoader instance   - loader for training set
         * test_loader: DataLoader instance    - loader for test set
     """
-    train_set = datasets.MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
+    train_set = datasets.MNIST(data_dir(), train=True, download=True, transform=transforms.ToTensor())
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=False)
 
-    test_set = datasets.MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+    test_set = datasets.MNIST(data_dir(), train=False, download=True, transform=transforms.ToTensor())
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False)
 
     return train_loader, test_loader
@@ -384,7 +385,7 @@ def main():
     train_loader, test_loader = create_data_loaders()
     print(train_loader)
     print(test_loader)
-    fname = os.path.join(os.getcwd(), 'saved_weights/mnist_weights.mat')
+    fname = output_path('saved_weights/mnist_weights.mat')
 
     # nom NN
 
@@ -407,7 +408,7 @@ def main():
     savemat(fname, data)
     Lip_dic = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
     Lip_nom = Lip_dic["Lipschitz"]
-    torch.save(model, 'MNIST784_NomModel.pt')
+    torch.save(model, output_path('MNIST784_NomModel.pt'))
 
     # plot losscourse
     plt.plot(loss_course)
@@ -451,7 +452,7 @@ def main():
     data = {'weightsL2': np.array(weightsL2, dtype=np.object)}
     savemat(fname, data)
     Lip_L2 = solve_SDP_multi.build_T_multi(weightsL2, biasesL2, net_dims)
-    torch.save(modelL2, 'MNIST784_L2Model.pt')
+    torch.save(modelL2, output_path('MNIST784_L2Model.pt'))
 
     # plot losscourse
     plt.plot(loss_courseL2)
@@ -534,7 +535,7 @@ def main():
             # Lip_Lip2 = solve_SDP.build_T(weightsLip2, biasesLip2, net_dims)
             data = {'weightsLip': np.array(weightsLip, dtype=np.object)}
             savemat(fname, data)
-            torch.save(modelLip, 'MNIST784_LipModel rho = {}, mu = {}.pt'.format(rho, mu))
+            torch.save(modelLip, output_path('MNIST784_LipModel rho = {}, mu = {}.pt'.format(rho, mu)))
 
             # plot losscourse
             plt.plot(loss_courseLip)
@@ -567,3 +568,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

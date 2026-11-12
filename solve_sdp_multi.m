@@ -2,8 +2,7 @@ function parameters=solve_sdp_multi(parameters, x, sdp)
 %[parameters] = solve_sdp(n_x, n_h, n_y, lambd, mu, Lip, ind_Lip, parameters)
 %test
 
-addpath(genpath('..\YALMIP-master'))
-addpath(genpath('C:\Program Files\Mosek\9.2'))
+configure_solver_paths();
 
 %net_dim = x;
 % net_dim = [2, 10, 10, 3];
@@ -68,7 +67,7 @@ if ind_Lip==1
 
     M = X2 + Q;
     F1 = (M <= -eps*eye(sum(net_dim(1:l+1))));
-    optimize(F1, mu*rho + W_diff + sumOfTraces);
+    diagnostics = optimize(F1, mu*rho + W_diff + sumOfTraces);
 elseif ind_Lip==2
     rho = Lip^2;
     Q_untenrechts = [zeros(net_dim(l)), W_bar{l}'; W_bar{l}, -eye(net_dim(l+1))];
@@ -81,8 +80,11 @@ elseif ind_Lip==2
     X2 = [A;B]'*[0*T, T; T, -2*T]*[A;B]; %M = X + Q;
     M = X2 + Q;
     F1 = (M <= -eps*eye(sum(net_dim(1:l+1))));
-    optimize(F1, mu*rho + W_diff + sumOfTraces);
+    diagnostics = optimize(F1, mu*rho + W_diff + sumOfTraces);
+else
+    error('Lipschitz:InvalidMode', 'ind_Lip must be 1 or 2.');
 end
+check_solver_status(diagnostics, 'Network parameter update');
 
 Lipschitz = sqrt(value(rho));
 
@@ -94,4 +96,5 @@ for k=1:l
 end
 
 parameters.Lipschitz=Lipschitz;
+
 

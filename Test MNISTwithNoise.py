@@ -1,7 +1,7 @@
 """Evaluate trusted MNIST196 full-model checkpoints on noisy MNIST images."""
 
 import inspect
-from pathlib import Path
+from experiment_paths import data_dir, model_path
 
 import torch
 import torch.nn as nn
@@ -55,7 +55,7 @@ def create_test_loader(std=None, b=None):
     elif b is not None:
         steps.append(AddUniformNoise(b=b))
     test_set = datasets.MNIST(
-        '/tmp', train=False, download=True,
+        data_dir(), train=False, download=True,
         transform=transforms.Compose(steps),
     )
     return torch.utils.data.DataLoader(
@@ -65,7 +65,7 @@ def create_test_loader(std=None, b=None):
 
 def load_models():
     paths = {
-        name: Path('MNIST196_{}Model.pt'.format(suffix))
+        name: model_path('MNIST196_{}Model.pt'.format(suffix))
         for name, suffix in [('Nominal', 'Nom'), ('L2', 'L2'),
                              ('Lipschitz', 'Lip'), ('LMT', 'LMT')]
     }
@@ -113,3 +113,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

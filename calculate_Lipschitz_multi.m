@@ -3,8 +3,7 @@
 
 function Lip = calculate_Lipschitz_multi(parameters, x)
 
-addpath(genpath('..\YALMIP-master'))
-addpath(genpath('C:\Program Files\Mosek\9.0'))
+configure_solver_paths();
 
 net_dim = x;
 % net_dim = [2, 10, 10, 3];
@@ -35,7 +34,8 @@ Q = blkdiag(-rho*eye(net_dim(1)),zeros(sum(net_dim(2:l-1))),W{l}'*W{l});
 M = [A; B]' * [zeros(sum(net_dim(2:l))), T; T, -2*T] * [A; B] + Q;
 F1 = (M <= -eps*eye(sum(net_dim(1:l))));
 
-optimize(F1, rho);
+diagnostics = optimize(F1, rho);
+check_solver_status(diagnostics, 'Lipschitz bound calculation');
 Lip.Lipschitz = sqrt(double(rho));
 Lip.T = double(T);
 
