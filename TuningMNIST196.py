@@ -541,7 +541,7 @@ def main():
             # Lip_Lip2 = solve_SDP.build_T(weightsLip2, biasesLip2, net_dims)
             data = {'weightsLip': np.array(weightsLip, dtype=np.object)}
             savemat(fname, data)
-            torch.save(model, 'MNIST196_LipModel rho = {}, mu = {}.pt'.format(rho, mu))
+            torch.save(modelLip, 'MNIST196_LipModel rho = {}, mu = {}.pt'.format(rho, mu))
 
             # plot losscourse
             plt.plot(loss_courseLip)
