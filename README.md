@@ -51,11 +51,13 @@ This runs the existing comparison experiment, rather than a short smoke test. It
 
 The tuning scripts perform hyperparameter sweeps and can take substantially longer. Review their settings before starting them.
 
-For the noise evaluation, first generate the four `MNIST196_*Model.pt` files with `VergleichMNIST196.py`, then run:
+For the noise evaluation, first generate the four trusted checkpoints `MNIST196_NomModel.pt`, `MNIST196_L2Model.pt`, `MNIST196_LipModel.pt`, and `MNIST196_LMTModel.pt` with `VergleichMNIST196.py`. Keep them in the repository root, then run:
 
 ```bash
 python "Test MNISTwithNoise.py"
 ```
+
+The evaluation itself needs only PyTorch and torchvision; it does not start MATLAB. It loads the full-model checkpoints on the CPU and downloads the MNIST test set to `/tmp` if needed. Only load trusted checkpoints, since full-model loading can execute code. It prints test accuracy for each model over Gaussian standard deviations from 0 to 0.5 and uniform full widths from 0 to 2 (noise in `[-b/2, b/2)`). All four models receive the same noisy images at each setting, with a fixed seed. Noise is added without clipping pixels to `[0, 1]`. No plots or result files are written by this evaluation.
 
 ## Data flow and current limitations
 
