@@ -41,15 +41,15 @@ def build_T_multi(weights, biases, net_dims):
     biases_dict = {}
     for i in range(len(weights)):
         parameters.update({
-            'W{:d}'.format(i): matlab.double(np.array(weights, dtype=np.object)[i].tolist()),
+            'W{:d}'.format(i): matlab.double(np.array(weights, dtype=object)[i].tolist()),
             })
         parameters.update({
-            'b{:d}'.format(i): matlab.double(np.array(biases, dtype=np.object)[i].tolist()),
+            'b{:d}'.format(i): matlab.double(np.array(biases, dtype=object)[i].tolist()),
             })
         weights_dict.update({
-            'W{:d}'.format(i): np.array(weights, dtype=np.object)[i].tolist() })
+            'W{:d}'.format(i): np.array(weights, dtype=object)[i].tolist() })
         biases_dict.update({
-            'b{:d}'.format(i): np.array(biases, dtype=np.object)[i].tolist() })
+            'b{:d}'.format(i): np.array(biases, dtype=object)[i].tolist() })
 
     with open(output_path('weights.json'), 'w') as f:  # writing JSON object
         json.dump(weights_dict, f)
@@ -78,13 +78,13 @@ def initialize_parameters(weights, biases):
     parameters = {}
     for i in range(len(weights)):
         parameters.update({
-            'W{:d}'.format(i): matlab.double(np.array(weights, dtype=np.object)[i].tolist()),
+            'W{:d}'.format(i): matlab.double(np.array(weights, dtype=object)[i].tolist()),
             })
         parameters.update({
-            'W{:d}_bar'.format(i): matlab.double(np.array(weights, dtype=np.object)[i].tolist()),
+            'W{:d}_bar'.format(i): matlab.double(np.array(weights, dtype=object)[i].tolist()),
             })
         parameters.update({
-            'b{:d}'.format(i): matlab.double(np.array(biases, dtype=np.object)[i].tolist()),
+            'b{:d}'.format(i): matlab.double(np.array(biases, dtype=object)[i].tolist()),
             })
         parameters.update({
             'Y{:d}'.format(i): matlab.double(torch.zeros(weights[i].shape).tolist()),

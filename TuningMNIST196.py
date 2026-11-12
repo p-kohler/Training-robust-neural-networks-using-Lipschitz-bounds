@@ -297,7 +297,7 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
             t = time.time()
             for j in range(len(weightsLip)):
                 parameters.update({
-                    'W{:d}'.format(j): matlab.double(np.array(weightsLip, dtype=np.object)[j].tolist()),
+                    'W{:d}'.format(j): matlab.double(np.array(weightsLip, dtype=object)[j].tolist()),
                     })
             timeParameterUpdate = time.time() - t
             print("Parameter update step complete after {} seconds.".format(timeParameterUpdate))
@@ -338,7 +338,7 @@ def train_network(model, train_loader, test_loader, lmbd=None, rho=None, mu=None
             t = time.time()
             for j in range(len(weightsLip)):
                 parameters.update({
-                    'W{:d}'.format(j): matlab.double(np.array(weightsLip, dtype=np.object)[j].tolist()),
+                    'W{:d}'.format(j): matlab.double(np.array(weightsLip, dtype=object)[j].tolist()),
                     })
             timeParameterUpdate = time.time() - t
             print("Parameter update step complete after {} seconds.".format(timeParameterUpdate))
@@ -411,7 +411,7 @@ def main():
 
     # save data to saved_weights/ directory
     weights, biases = model.extract_weights()
-    data = {'weights': np.array(weights, dtype=np.object)}
+    data = {'weights': np.array(weights, dtype=object)}
     savemat(fname, data)
     Lip_dic = solve_SDP_multi.build_T_multi(weights, biases, net_dims)
     Lip_nom = Lip_dic["Lipschitz"]
@@ -456,7 +456,7 @@ def main():
 
     # save data to saved_weights/ directory
     weightsL2, biasesL2 = modelL2.extract_weights()
-    data = {'weightsL2': np.array(weightsL2, dtype=np.object)}
+    data = {'weightsL2': np.array(weightsL2, dtype=object)}
     savemat(fname, data)
     Lip_L2 = solve_SDP_multi.build_T_multi(weightsL2, biasesL2, net_dims)
     torch.save(modelL2, output_path('MNIST196_L2Model.pt'))
@@ -540,7 +540,7 @@ def main():
 
             Lip_Lip = solve_SDP_multi.build_T_multi(weightsLip, biasesLip, net_dims)
             # Lip_Lip2 = solve_SDP.build_T(weightsLip2, biasesLip2, net_dims)
-            data = {'weightsLip': np.array(weightsLip, dtype=np.object)}
+            data = {'weightsLip': np.array(weightsLip, dtype=object)}
             savemat(fname, data)
             torch.save(modelLip, output_path('MNIST196_LipModel rho = {}, mu = {}.pt'.format(rho, mu)))
 
